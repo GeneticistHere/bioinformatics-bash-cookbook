@@ -1,0 +1,28 @@
+# conda env create -f environment.yml && conda activate bash-cookbook
+#
+# `nodefaults` keeps the Anaconda `defaults` channel out of the solve. That
+# channel's terms of service require a paid licence for many institutional and
+# commercial users, and everything here is available from conda-forge/bioconda.
+name: bash-cookbook
+
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+
+dependencies:
+  # the core trio
+  - bioconda::samtools>=1.19
+  - bioconda::bcftools>=1.19
+  - bioconda::bedtools>=2.31
+  # htslib supplies bgzip and tabix, which several recipes need and which do
+  # not ship with samtools itself
+  - bioconda::htslib>=1.19
+  - bioconda::seqtk>=1.4
+  # parallel compression and fast recursive search
+  - conda-forge::pigz>=2.8
+  - conda-forge::ripgrep>=14.0
+  # GNU awk: the macOS system awk lacks gensub and some POSIX character classes
+  - conda-forge::gawk>=5.1
+  # only needed to run the test suite and regenerate the toy data
+  - conda-forge::python>=3.9

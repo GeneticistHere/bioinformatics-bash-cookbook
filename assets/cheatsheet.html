@@ -1,0 +1,148 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: #ffffff; }
+body {
+  width: 1200px; min-height: 1100px;
+  background: #ffffff;
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: 50px 54px 0 54px;
+  color: #000000;
+}
+h1 { font-size: 38px; font-weight: 700; letter-spacing: -0.4px; }
+.sub {
+  font-size: 18px; color: #3d3d3d; margin-top: 11px; line-height: 1.45;
+}
+.rows { margin-top: 30px; }
+.row {
+  display: grid; grid-template-columns: 40px 1fr;
+  padding: 13px 0 14px 0;
+  border-top: 1px solid #dcdcdc;
+}
+.row:last-child { border-bottom: 1px solid #dcdcdc; }
+.num {
+  font-size: 17px; color: #8a8a8a; font-weight: 700; padding-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.cmd {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 15px; line-height: 1.62; white-space: nowrap;
+}
+.bad  { color: #C0392B; }
+.good { color: #007a59; }
+.mark { display: inline-block; width: 20px; font-weight: 700; }
+.why {
+  font-size: 14px; color: #3d3d3d; margin-top: 6px; line-height: 1.4;
+}
+.id { color: #8a8a8a; }
+footer {
+  margin-top: 26px; display: flex; justify-content: space-between;
+  align-items: baseline;
+}
+.repo {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 17px; color: #0072B2;
+}
+.stats { font-size: 15px; color: #8a8a8a; }
+</style></head>
+<body>
+  <h1>Ten bioinformatics one-liners that are quietly wrong</h1>
+  <div class="sub">
+    Each of these runs without an error and prints a plausible number.
+    The number is not what you think it is.
+  </div>
+  <div class="rows">
+    <div class="row">
+      <div class="num">01</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>samtools depth in.bam | awk &#x27;{s+=$3} END {print s/NR}&#x27;</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>samtools depth -a in.bam | awk &#x27;{s+=$3} END {print s/NR}&#x27;</div>
+        <div class="why">Without -a, samtools depth omits zero-coverage positions entirely, so dividing by NR gives mean depth over covered bases only <span class="id">(B04)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">02</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>samtools view -c -F 4 in.bam</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>samtools view -c -F 0x904 in.bam</div>
+        <div class="why">-F 4 also counts secondary (0x100) and supplementary (0x800) alignments, so it over-reports <span class="id">(B02)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">03</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>samtools fastq -f 4 in.bam &gt; unmapped.fq</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>samtools fastq -f 4 -1 un_R1.fq -2 un_R2.fq -0 /dev/null -s /dev/null -n in.bam</div>
+        <div class="why">`samtools fastq -f 4 in.bam &gt; out.fq` interleaves R1 and R2 into one file and drops singletons silently <span class="id">(B07)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">04</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>awk -F&#x27;\t&#x27; &#x27;$3==&quot;gene&quot; {print $9}&#x27; in.gtf | awk -F&#x27;;&#x27; &#x27;{print $1, $3}&#x27;</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>awk -F&#x27;\t&#x27; &#x27;$3==&quot;gene&quot; &amp;&amp; match($9, /gene_name &quot;[^&quot;]+&quot;/) {print substr($9, RSTART+11, RLENGTH-12)}&#x27; in.gtf</div>
+        <div class="why">Positional parsing (`cut -d&#x27;;&#x27; -f3`) breaks on genes with no gene_name - common for novel and lncRNA genes - and silently returns gene_source instead <span class="id">(G02)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">05</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>samtools view in.bam | wc -l</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>set -o pipefail; samtools view in.bam | wc -l</div>
+        <div class="why">By default a pipeline reports only the LAST command&#x27;s status, so a crashed samtools upstream of `wc -l` looks like success <span class="id">(P06)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">06</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>gzip -c in.vcf &gt; in.vcf.gz &amp;&amp; tabix -p vcf in.vcf.gz</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>bgzip -c in.vcf &gt; in.vcf.gz &amp;&amp; tabix -p vcf in.vcf.gz</div>
+        <div class="why">A plain `gzip` file cannot be indexed <span class="id">(V12)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">07</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>bedtools merge -i regions.bed</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>sort -k1,1 -k2,2n regions.bed | bedtools merge -i -</div>
+        <div class="why">bedtools merge assumes sorted input <span class="id">(D01)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">08</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>seqtk sample -s100 R1.fq.gz 10000 &gt; s1.fq; seqtk sample -s42 R2.fq.gz 10000 &gt; s2.fq</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>seqtk sample -s100 R1.fq.gz 10000 &gt; s1.fq; seqtk sample -s100 R2.fq.gz 10000 &gt; s2.fq</div>
+        <div class="why">Using a different -s seed for R1 and R2 silently destroys pairing <span class="id">(F03)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">09</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>pigz -dc big.fq.gz | wc -l</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>gzip -dc big.fq.gz | wc -l   # same speed; use pigz -p N to COMPRESS</div>
+        <div class="why">pigz parallelises compression only <span class="id">(P01)</span></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="num">10</div>
+      <div>
+        <div class="cmd bad"><span class="mark">&#10007;</span>sort -k1,1 -k2,2n big.bed | join - ids.txt</div>
+        <div class="cmd good"><span class="mark">&#10003;</span>LC_ALL=C sort -k1,1 -k2,2n big.bed | LC_ALL=C join - ids.txt</div>
+        <div class="why">LC_ALL=C is a large speed-up but it changes collation order <span class="id">(P03)</span></div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="repo">github.com/GeneticistHere/bioinformatics-bash-cookbook</div>
+    <div class="stats">66 recipes &middot; 43 traps &middot;
+      every command tested in CI</div>
+  </footer>
+  <script>
+    // Publish the laid-out height so the renderer can size the canvas exactly
+    // instead of guessing and clipping the last row.
+    document.title = "H" + Math.ceil(
+      document.body.getBoundingClientRect().height + 40);
+  </script>
+</body></html>

@@ -1,0 +1,253 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+@page { size: 1080px 1350px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: #ffffff; }
+body {
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  color: #111111;
+}
+.page {
+  width: 1080px; height: 1350px;
+  padding: 84px 74px;
+  display: flex; flex-direction: column;
+  page-break-after: always; break-after: page;
+  position: relative;
+}
+.page:last-child { page-break-after: auto; break-after: auto; }
+
+/* cover */
+.cover-kicker {
+  font-family: "SF Mono", Menlo, monospace; font-size: 26px;
+  color: #0072B2; letter-spacing: 0.5px; margin-bottom: 34px;
+}
+.cover h1 {
+  font-size: 92px; line-height: 1.04; font-weight: 800;
+  letter-spacing: -2px;
+}
+.cover .lede {
+  font-size: 34px; line-height: 1.42; color: #3d3d3d; margin-top: 40px;
+}
+.spacer { flex: 1; }
+.cover .foot {
+  font-family: "SF Mono", Menlo, monospace; font-size: 23px; color: #6b6b6b;
+}
+
+/* trap pages */
+.num {
+  font-family: "SF Mono", Menlo, monospace; font-size: 27px;
+  color: #9a9a9a; margin-bottom: 26px;
+}
+h2 {
+  font-size: 62px; line-height: 1.1; font-weight: 800;
+  letter-spacing: -1.2px; margin-bottom: 54px;
+}
+.block { margin-bottom: 40px; }
+.tag {
+  font-size: 23px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase; margin-bottom: 14px;
+}
+.tag.bad  { color: #C0392B; }
+.tag.good { color: #1E7A4C; }
+.code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 33px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+  padding: 22px 26px; border-radius: 8px;
+  border-left: 7px solid transparent;
+}
+.code.bad  { background: #fbeceb; border-left-color: #C0392B; color: #8d2b20; }
+.code.good { background: #e9f5ef; border-left-color: #1E7A4C; color: #15563a; }
+.why {
+  font-size: 33px; line-height: 1.46; color: #3d3d3d;
+  border-top: 2px solid #e4e4e4; padding-top: 30px;
+}
+.rid {
+  position: absolute; right: 78px; bottom: 62px;
+  font-family: "SF Mono", Menlo, monospace; font-size: 21px; color: #b4b4b4;
+}
+
+/* closing */
+.close h2 { font-size: 74px; margin-bottom: 46px; }
+.close ul { list-style: none; font-size: 33px; line-height: 1.85; }
+.close li:before { content: "\2022"; color: #0072B2; margin-right: 18px; }
+.close .repo {
+  font-family: "SF Mono", Menlo, monospace; font-size: 27px;
+  color: #0072B2; margin-top: 12px; word-break: break-all;
+}
+</style></head>
+<body>
+<section class="page cover">
+  <div class="cover-kicker">bioinformatics</div>
+  <h1>Ten one-liners<br>that are<br>quietly wrong</h1>
+  <div class="lede">Each one runs without an error and prints a plausible
+    number.<br>The number is not what you think it is.</div>
+  <div class="spacer"></div>
+  <div class="foot">github.com/GeneticistHere/bioinformatics-bash-cookbook</div>
+</section>
+<section class="page">
+  <div class="num">01 / 10</div>
+  <h2>Your coverage number is too high</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">samtools depth in.bam | awk &#x27;{s+=$3} END {print s/NR}&#x27;</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">samtools depth -a in.bam | awk &#x27;{s+=$3} END {print s/NR}&#x27;</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">Without -a, samtools depth omits zero-coverage positions entirely, so dividing by NR gives mean depth over covered bases only.</div>
+  <div class="rid">B04</div>
+</section>
+<section class="page">
+  <div class="num">02 / 10</div>
+  <h2>You are counting the same read twice</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">samtools view -c -F 4 in.bam</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">samtools view -c -F 0x904 in.bam</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">-F 4 also counts secondary (0x100) and supplementary (0x800) alignments, so it over-reports.</div>
+  <div class="rid">B02</div>
+</section>
+<section class="page">
+  <div class="num">03 / 10</div>
+  <h2>Your unmapped reads lost their pairing</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">samtools fastq -f 4 in.bam &gt; unmapped.fq</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">samtools fastq -f 4 -1 un_R1.fq -2 un_R2.fq -0 /dev/null -s /dev/null -n in.bam</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">samtools fastq -f 4 in.bam &gt; out.fq interleaves R1 and R2 into one file and drops singletons silently.</div>
+  <div class="rid">B07</div>
+</section>
+<section class="page">
+  <div class="num">04 / 10</div>
+  <h2>Your gene names are silently wrong</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">awk -F&#x27;\t&#x27; &#x27;$3==&quot;gene&quot; {print $9}&#x27; in.gtf | awk -F&#x27;;&#x27; &#x27;{print $1, $3}&#x27;</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">awk -F&#x27;\t&#x27; &#x27;$3==&quot;gene&quot; &amp;&amp; match($9, /gene_name &quot;[^&quot;]+&quot;/) {print substr($9, RSTART+11, RLENGTH-12)}&#x27; in.gtf</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">Positional parsing (cut -d&#x27;;&#x27; -f3) breaks on genes with no gene_name - common for novel and lncRNA genes - and silently returns gene_source instead.</div>
+  <div class="rid">G02</div>
+</section>
+<section class="page">
+  <div class="num">05 / 10</div>
+  <h2>The pipeline failed and said nothing</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">samtools view in.bam | wc -l</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">set -o pipefail; samtools view in.bam | wc -l</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">By default a pipeline reports only the LAST command&#x27;s status, so a crashed samtools upstream of wc -l looks like success.</div>
+  <div class="rid">P06</div>
+</section>
+<section class="page">
+  <div class="num">06 / 10</div>
+  <h2>gzip is not bgzip</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">gzip -c in.vcf &gt; in.vcf.gz &amp;&amp; tabix -p vcf in.vcf.gz</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">bgzip -c in.vcf &gt; in.vcf.gz &amp;&amp; tabix -p vcf in.vcf.gz</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">A plain gzip file cannot be indexed.</div>
+  <div class="rid">V12</div>
+</section>
+<section class="page">
+  <div class="num">07 / 10</div>
+  <h2>merge trusted you to sort first</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">bedtools merge -i regions.bed</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">sort -k1,1 -k2,2n regions.bed | bedtools merge -i -</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">bedtools merge assumes sorted input.</div>
+  <div class="rid">D01</div>
+</section>
+<section class="page">
+  <div class="num">08 / 10</div>
+  <h2>Your subsampled mates no longer match</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">seqtk sample -s100 R1.fq.gz 10000 &gt; s1.fq; seqtk sample -s42 R2.fq.gz 10000 &gt; s2.fq</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">seqtk sample -s100 R1.fq.gz 10000 &gt; s1.fq; seqtk sample -s100 R2.fq.gz 10000 &gt; s2.fq</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">Using a different -s seed for R1 and R2 silently destroys pairing.</div>
+  <div class="rid">F03</div>
+</section>
+<section class="page">
+  <div class="num">09 / 10</div>
+  <h2>pigz did not speed that up</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">pigz -dc big.fq.gz | wc -l</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">gzip -dc big.fq.gz | wc -l   # same speed; use pigz -p N to COMPRESS</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">pigz parallelises compression only.</div>
+  <div class="rid">P01</div>
+</section>
+<section class="page">
+  <div class="num">10 / 10</div>
+  <h2>LC_ALL=C is fast, and dangerous</h2>
+  <div class="block">
+    <div class="tag bad">&#10007; what people write</div>
+    <div class="code bad">sort -k1,1 -k2,2n big.bed | join - ids.txt</div>
+  </div>
+  <div class="block">
+    <div class="tag good">&#10003; what it should be</div>
+    <div class="code good">LC_ALL=C sort -k1,1 -k2,2n big.bed | LC_ALL=C join - ids.txt</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="why">LC_ALL=C is a large speed-up but it changes collation order.</div>
+  <div class="rid">P03</div>
+</section>
+<section class="page close">
+  <h2>All of it, tested.</h2>
+  <ul>
+    <li>66 command-line recipes</li>
+    <li>43 documented traps</li>
+    <li>A 300 KB toy genome, committed</li>
+    <li>Every command run in CI on each push</li>
+  </ul>
+  <div class="spacer"></div>
+  <div class="lede" style="font-size:30px">Clone it and every command in the
+    README runs immediately. Nothing to download.</div>
+  <div class="repo">github.com/GeneticistHere/bioinformatics-bash-cookbook</div>
+</section>
+</body></html>
